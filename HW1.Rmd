@@ -1,0 +1,80 @@
+---
+title: "Homework1"
+author: "Kevin Mack"
+date: "1/14/2016"
+output: pdf_document
+---
+
+----
+Introduction to R: Basics
+-----
+
+We are working with a dataset of the species richness of vascular plants within the Tallgrass Prairie Preserve (TgPP).
+
+
+```{r}
+dat1=read.csv('http://dmcglinn.github.io/quant_methods/data/tgpp.csv', header=TRUE)
+summary(dat1)
+```
+
+1. This names of the columns in the dataset are plot, year, record_id, corner, scale, richness, easting, northing, slope, ph, and yrsslb. These headers are listed when viewing the data, but can also be obtained by the names() function.
+```{r}
+names(dat1)
+```
+
+
+
+2. This datafile has 11 columns and 4,080 rows. 
+```{r}
+dim(dat1)
+```
+
+
+
+
+3. The dataset as a whole is a dataframe object. Each of the columns is a different object. Some are integers and some are numerics. Integers are whole numbers (eg 3,4,5,6), numeric inculde fractions or non whole numebers (eg 3,4,5,6.3). 
+```{r}
+class(dat1)
+sapply(dat1,class)
+```
+
+
+
+4. The values of rows 1, 5, and 8 at columns 3 (record_id), 7 (easting), and 10 (ph) are given below.
+```{r}
+dat1[c(1,5,8),c(3,7,10)]
+```
+
+
+
+5. Below I've plotted the relationship between scale and richness, or the Species Richness as a function of Quadrat Area. This plot is dificult to intrepret as species richness varies quite a bit for each given quadrat area.
+```{r}
+plot(dat1$scale, dat1$richness, 
+     xlab=expression("Quadrat Area " (m^2)), 
+     ylab=" Species Richness",col="red")
+```
+log transforming the quadrat area (scale) makes a trend more apparent, but again intrepretation is hindered by variation in spices richness.
+```{r}
+plot(dat1$scale, dat1$richness, log='xy', 
+     xlab=expression(log[10]*" Quadrat Area " (m^2)), 
+     ylab="Species Richness",col="red")
+```
+Based on the questions (and Dan's answers) on github, I generated the following two plots. The first is a boxplot with both variables log transformed. This shows the general trend that species richness increases with increasing quadrat area. Additionally, this plot visually shows the variability in species richness without overcrowding the figure. Personally, this is my prefered method of representing the data. The final figure is also log transformed, but represents the average species richness as a function of quadrat area. This figure best represents the trend, but does not capture variability in species richness.
+
+```{r}
+boxplot(log10(dat1$richness) ~ log10(dat1$scale), 
+        xlab=expression(log[10]*"Quadrat Area " (m^2)), 
+        ylab=expression(log[10]*" Species Richness"))
+#the ~ triggers r to use a formula, tells r that y~x and that x is a group variable or factor
+```
+
+
+```{r}
+avg_richness = tapply(dat1$richness, dat1$scale, mean)
+area = as.numeric(names(avg_richness))
+plot(log10(area), log10(avg_richness), lwd=2, col='red', type="o", 
+     xlab=expression(log[10]*"Quadrat Area " (m^2)),
+     ylab=expression(log[10]*" Species Richness"))
+
+```
+
