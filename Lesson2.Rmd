@@ -1,0 +1,164 @@
+---
+title: "Homework 2"
+author: "Kevin Mack"
+date: "Monday, January 18, 2016"
+output: pdf_document
+---
+
+----
+Introduction to R: Intermediate
+-----
+
+We were given a vague loop manipulating the (infamous) iris dataset:
+
+```{r}
+data(iris)
+names(iris)
+
+species=unique(iris$Species)
+#creates a factor with leves of each of the species contained in iris
+species
+
+output=matrix(0,nrow=length(species), ncol=ncol(iris)-1)
+#creates the output matrix with a number of rows equal to the species factor created earlier, and columns equal to the number of columns in the iris dataset minus one (the species column)
+rownames(output)=species
+#names the rows in the output matrix the names of the iris species pulled out in the species factor
+colnames(output)=names(iris[,-ncol(iris)])
+#names the columns in the output matrix the names of the columns in the iris dataset
+
+for(i in seq_along(species)) {
+  iris_sp = subset(iris, subset=Species == species[i], select=-Species) #i selects species
+  for(j in 1:(ncol(iris_sp))){  #j fills in a value for each column
+    x=0
+    y=0
+    if (nrow(iris_sp) > 0) {
+      for(k in 1:nrow(iris_sp)) {  #k searches each trait
+        x=x+iris_sp[k,j] #this sums the measured values 
+        y=y+1 #this takes a count
+      }
+      output[i,j] = x/y #this outputs the mean trait values for each species
+    }
+  }
+}
+output
+```
+
+1. This loop samples the iris dataset to produce an output table listing the mean measurement values for each species of iris studied. The loop produced relies on three characters i, j, and k, that subsamples the iris dataset, provides sums and counts of measurent variables, and calculates the mean of each variable for each species.
+
+2. A pesudo code to describe this loop would be something like:
+
+loop through iris and subset the four measurment values for each species...
+  loop through each species and sum measurment values and counts...
+    loop through each species to divide summations by counts and place in output matrix
+      generate output matrix
+      
+3. This loop had vague variables that could be re-named. the variable x could be renamed 'sum' and y could be renamed 'count'. I personally dont take issue with the naming of output, it is the output table afterall, but to be more specific it could be renamed means_table as below:
+
+```{r}
+data(iris)
+names(iris)
+
+species=unique(iris$Species)
+species
+
+means_table=matrix(0,nrow=length(species), ncol=ncol(iris)-1)
+rownames(means_table)=species
+colnames(means_table)=names(iris[,-ncol(iris)])
+
+
+for(i in seq_along(species)) {
+  iris_sp = subset(iris, subset=Species == species[i], select=-Species) 
+  for(j in 1:(ncol(iris_sp))){ 
+    sum=0
+    count=0
+    if (nrow(iris_sp) > 0) {
+      for(k in 1:nrow(iris_sp)) {  #k searches each trait
+        sum=sum+iris_sp[k,j] #this sums the measured values 
+        count=count+1 #this takes a count
+      }
+      means_table[i,j] = sum/count #this outputs the mean trait values for each species
+    }
+  }
+}
+means_table
+```
+
+4. To make this loop shorter we can combine two of the loops. We can remove the loop that takes counts and summations, and the loop that calculates the mean from those counts and summations and replace them with a single loop that uses the mean() function:
+
+```{r}
+data(iris)
+names(iris)
+
+species1=unique(iris$Species)
+species1
+
+output1=matrix(0,nrow=length(species1), ncol=ncol(iris)-1)
+rownames(output1)=species1
+colnames(output1)=names(iris[,-ncol(iris)])
+
+
+for(i in seq_along(species1)) {
+  iris_sp = subset(iris, subset=Species == species1[i], select=-Species) 
+  for(j in 1:(ncol(iris_sp))){  #
+    mean = mean(iris_sp[,j])
+    if (nrow(iris_sp) > 0)
+     output1[i,j] = mean
+     }
+}
+output1
+```
+
+5. My loop:
+
+```{r}
+x1=c(1:10)
+x1
+y1=vector("character",10)
+
+for (i in 1:10){
+  y1[i]=sum(x1[1:i])  
+}
+ 
+y1
+```
+
+6. My loop that returns NA if i > 10:
+
+```{r}
+x2=c(1:10)
+x2
+y2=vector("integer",10)
+
+for (i in 1:10){
+  y2[i]=sum(x2[1:i])
+  
+  if (y2[i] > 10 ){
+    y2[i]="NA"
+  }
+}
+
+y2
+ 
+```
+
+7. My loop as a function, my_func():
+
+```{r}
+my_func=function(x){
+  y3=NULL
+    for(i in 1:length(x)){
+    y3[i]=sum(x[1:i])
+    
+    if(y3[i] > 10){
+      y3[i]="NA"
+    }
+  }
+  return(y3)
+}
+
+my_func(1:30)
+random_vector=c(1,3,5,6,2,6,7,8)
+my_func(random_vector)
+```
+
+
