@@ -1,0 +1,7 @@
+---
+title: "Homework 3"
+author: "Kevin Mack"
+date: "2/3/2016"
+output: pdf_document
+---
+
