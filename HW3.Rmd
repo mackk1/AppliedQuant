@@ -5,3 +5,121 @@ date: "2/3/2016"
 output: pdf_document
 ---
 
+Univariate Assignment
+--
+1) Working with a tree dataset we are interested in how tree cover (local abundance measured as estimated horizontal cover (ie, relative area of shadow if sun is directly above) in classes from 1-10: 1=trace, 2=0-1%, 3=1-2%, 4=2-5%, 5=5-10%, 6=10-25%, 7=25-50%, 8=50-75%, 9=75-95%, 10=95-100%) of two species of trees is affected by a variety of other factors. The two tree species we are interested in are the Red maple, Acer rubrum, a habitat generalist, and the Frasier fir, Abies fraseri, a habitat specialist. 
+
+We will use univariate analysis to determine how cover (y) is influenced by elevation (elevation in meters from a digital elevation model , x1), water potential (topographic convergence index, or site "water potential"; measured as the upslope contributing area divided by the tangent of the slope angle, x2), stream distance ( distance of plot from the nearest permanent stream (meters), x3), disturbance (disturbance history (from a Park report); CORPLOG=corporate logging; SETTLE=concentrated settlement, VIRGIN="high in virgin attributes", LT-SEL=light or selective logging, x4), and "beers", which incidentaly, isnt as fun as it sounds ( transformed slope aspect ('heat load index'); 0 is SW (hottest), 2 is NE (coolest), x5)
+
+```{r}
+library(car)
+
+trees = read.csv('https://raw.githubusercontent.com/dmcglinn/quant_methods/gh-pages/data/treedata_subset.csv')
+
+names(trees)
+sapply(trees, class)
+
+plot(cover~species, data = trees) #lots going on, doesnt tell us much
+
+#subset data to look as species of interest
+cols_of_interest = c('cover', 'tci', 'elev', 'disturb', 'beers', 'streamdist') 
+#pulls out variables we are interested in
+acer = subset(trees, species == "Acer rubrum", select= cols_of_interest)
+abies = subset(trees, species == "Abies fraseri", select=cols_of_interest)
+
+
+```
+
+Modeling Acer rubrum
+
+```{r}
+plot(acer) #too much information, and only really interested in cover
+par(mfrow=c(1,1))
+plot(cover ~ tci + elev + disturb + beers + streamdist, data = acer) #better?
+par(mfrow=c(1,1))
+
+mod_acer = lm(cover ~ ., data=acer)
+par(mfrow=c(2,2))
+plot(mod_acer)#plots of the model fit
+par(mfrow=c(1,1))
+Anova(mod_acer, type=3)# elev, beers, and streamdist significantly affect cover
+summary(mod_acer) #4.805 ratio explained variation to unexplained, poor rsquared fit
+
+```
+From this model, tree cover in Acer rubrum is significantly affected by elevation, heat load index, and distance from stream. Though, this model still has a lot of unexplained variance (f = 4.05) and a relitavely poor adjusted R-Squared (0.035). This model does not appear to explain cover in Acer rubrum very well, but because the species is a habitat generalist, we may have expected tree cover to influenced by a wide number of factors (and be difficult to model).
+
+Modeling Abies fraseri
+
+```{r}
+plot(abies)
+par(mfrow=c(2,2))
+plot(cover ~ tci + elev + disturb + beers + streamdist, data = abies)
+par(mfrow=c(1,1))
+
+mod_abies = lm(cover ~ ., data=abies)
+par(mfrow=c(2,2))
+plot(mod_abies) #clear trend in elevation plot
+par(mfrow=c(1,1))
+Anova(mod_abies, type=3) #only elevation significant
+summary(mod_abies) # 7.17 ratio explained to unexplained variation, 0.5 rsquared
+
+```
+From this model, tree cover in Abies fraseri is significantly affected only by elevation. This model better explains variation (f = 7.17) and has a better fit (R-Squared = 0.5) than the model of Acer rubrum. Because Abies fraseri is a habitat specalist, with a seemingly higher fitness in higher elevations, it is reasonable that changes in elevation are more significant than other factors.
+
+
+
+
+
+
+
+
+
+
+2) Re-Examine with Poisson Distribution
+
+```{r}
+acer_glm = glm(cover ~ . , data= acer, family='poisson')
+par(mfrow=c(2,2))
+plot(acer_glm)
+par(mfrow=c(1,1))
+
+rsq=function(glm_mod){
+  1-glm_mod$deviance/glm_mod$null.deviance
+}
+
+acer_glm #new model
+summary(acer_glm) #same significant factors
+rsq(acer_glm) #slightly better rsquared (0.04), still a poorly fitted model 
+
+anova(mod_acer, acer_glm) # much lower RSS in glm indicates better fit
+```
+
+
+```{r}
+abies_glm = glm(cover ~ . , data= abies, family='poisson')
+par(mfrow=c(2,2))
+plot(abies_glm) #them be some squiggly lines
+par(mfrow=c(1,1))
+
+
+abies_glm
+summary(abies_glm) #same significant variable
+rsq(abies_glm) #better rsquared (0.60)
+
+anova(mod_abies, abies_glm)#again, lowered residual sum of squares in glm indicates better fit
+```
+
+In both species, the glm model has improved the rsquared fit. Addationally, the glm model had lower residual sum of squares compared to the olm model. 
+
+
+
+
+
+
+
+
+
+3) The biological story told by these data paints a picture of two different habitat selection modes. The habitat specailist, Abies fraseri fits a model of tree coverage that is best explained by elevation out of all of the other factors. As elevation increases, so does cover, and as a proxy the fitness of this species. Other factors such as stream distance or heat load are less significant to this model, likely because this species has specialized to living in higher elevations. The alternate story is that of the habitat generalist, Acer rubrum. In this species, cover can be explained most effectively by elevation, but also by heat load index, and distance from the nearest stream. The fitness of a species that does not fulfill any specific niche is likely to be dependent on a variety of factors. 
+
+
+
