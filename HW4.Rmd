@@ -1,0 +1,122 @@
+---
+title: "HW4"
+author: "Kevin Mack"
+date: "2/10/2016"
+output: pdf_document
+---
+Multivariate Modeling
+--
+
+Working with data about dune plants from Denmark 
+
+```{r}
+library(vegan)
+data(dune) #30 species each with 20 observations
+data(dune.env) #data on the environemnt
+?dune
+names(dune)
+names(dune.env)
+summary(dune.env)
+```
+
+1. We are interested in using indirect ordination methods (NMDS) to examine the role that moisture plays in dune plant communities. A quick visual summary indicates that some species are much more common than others, and that community assemblages vary. The NMDS plot groups species and environmental moisture levels. This plot indicates that genrally, species assemblages could be predicted based on high (4-5) and low (1-2) moisture levels.  I would hypothesize that areas of dune with high moisture would host plant communities significantly different from those with low moisture.
+
+```{r}
+sp_sum = apply(dune, 2, sum)
+obs_sum = apply(dune, 1, sum)
+par(mfrow=c(1,2))
+hist(sp_sum) #give me a histogram of the frequency each species occurs (ie, there are x species that occur 1000 times)
+hist(obs_sum) #give me a histogram of the frequency of species in each observation/site? (there are x sites that have 40 species in them)
+par(mfrow=c(1,1))
+```
+
+```{r}
+# Non-metric multidimenstional scaling (MDS) with default  Bray-Curtis.
+dune_mds = (metaMDS(dune))
+dune_mds
+
+stressplot(dune_mds, main="Shepard plot")
+
+plot(dune_mds, type='n')
+text(dune_mds, 'sp', cex=.5)
+# generate vector of colors 
+color_vect = rev(terrain.colors(6))[-1]
+points(dune_mds, 'sites', pch=19, 
+       col=color_vect[dune.env$Moisture])
+legend('topright', paste("Moisture =", c(1,2,4,5), sep=''), #fixed
+       col=color_vect, pch=19)
+
+```
+
+
+2. Continuing off the 
+
+```{r}
+r2_adj_cca = function(cca_obj, nperm, analytical=FALSE) {
+      r2 = cca_obj$CCA$tot.chi / cca_obj$tot.chi 
+    n = nrow(cca_obj$CCA$Xbar)
+    if (missing(nperm)) {
+        # eq 4 Peres-Neto
+        p = cca_obj$CCA$rank
+        out = c(r2, 1 - (((n - 1) / (n - p - 1)) * (1 - r2)))
+    }
+    else {
+        if (nperm <= 0)
+            stop('nperm argument must either be a positive integer or not specified')
+        if (!any(grepl('~', cca_obj$call)))
+            stop('The model object must be specified using a model formula rather than providing individual vectors / matrices')
+        rand.r2 = rep(NA, nperm)
+        Y_string = as.character(cca_obj$terms[[2]])
+        Y = eval(parse(text=Y_string))
+        for (i in 1:nperm) {
+            Yrand = Y[sample(n), ]
+            #assign(Y_string, Yrand)
+            #cca.rand = eval(cca_obj$call)
+            cca_obj$call[2] = sub('comm', 'Yrand', cca_obj$call[2])
+            cca.rand = eval(parse(text=paste(cca_obj$call[1], '(',cca_obj$call[2], 
+                                             ', data=', cca_obj$call[3], ')', 
+                                             sep='')))
+            #cca.rand = update(cca_obj, Yrand ~ .)
+            rand.r2[i] = cca.rand$CCA$tot.chi / cca_obj$tot.chi
+            if (i %% 100 == 0)  print(i)
+        }
+        # Eq 5 Peres-Neto
+        out = c(r2, 
+                1 - ((1 - r2) / (1 - mean(rand.r2))))
+    }
+    names(out) = c('r2', 'r2adj')
+    return(out)
+}
+
+```
+
+```{r}
+dune_cca = cca(dune ~ . , data=dune.env) #compares the community matrix to the environmental matrix.
+dune_cca #environmental variables explain more than 71% of variation
+r2_adj_cca(dune_cca, 100, analytical = FALSE) # r2=.71
+
+plot(dune_cca, type='n', scaling=1)
+orditorp(dune_cca, display='sp', cex=0.5, scaling=1, col='blue')
+text(dune_cca, display='bp', col='red')
+#moisture is somewhat split in loading along both axies. could this support my high vs low moisture hypothesis?
+
+anova(dune_cca)
+anova(dune_cca, by='margin')
+#the model itself is significant, but individual variables do not appear to be.
+
+
+
+dune_cca_moist = cca(dune ~ dune.env$Moisture)
+dune_cca_moist #moisture alone explains 30% of variation or.
+
+plot(dune_cca_moist, type='n', scaling=1)
+orditorp(dune_cca_moist, display='sp', cex=0.5, scaling=1, col='blue')
+text(dune_cca_moist, display='bp', col='red')
+
+anova(dune_cca_moist)
+
+```
+
+
+
+
