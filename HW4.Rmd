@@ -1,7 +1,7 @@
 ---
 title: "HW4"
 author: "Kevin Mack"
-date: "2/10/2016"
+date: "2/15/2016"
 output: pdf_document
 ---
 Multivariate Modeling
@@ -19,16 +19,20 @@ names(dune.env)
 summary(dune.env)
 ```
 
-1. We are interested in using indirect ordination methods (NMDS) to examine the role that moisture plays in dune plant communities. A quick visual summary indicates that some species are much more common than others, and that community assemblages vary. The NMDS plot groups species and environmental moisture levels. This plot indicates that genrally, species assemblages could be predicted based on high (4-5) and low (1-2) moisture levels.  I would hypothesize that areas of dune with high moisture would host plant communities significantly different from those with low moisture.
+1. We are interested in using indirect ordination methods (NMDS) to examine the role that moisture plays in dune plant communities. A quick visual summary indicates that some species are much more common than others, and that community assemblages vary. 
 
 ```{r}
 sp_sum = apply(dune, 2, sum)
 obs_sum = apply(dune, 1, sum)
 par(mfrow=c(1,2))
-hist(sp_sum) #give me a histogram of the frequency each species occurs (ie, there are x species that occur 1000 times)
-hist(obs_sum) #give me a histogram of the frequency of species in each observation/site? (there are x sites that have 40 species in them)
+hist(sp_sum) #give me a histogram of the frequency each species occurs 
+#(ie, there are x species that occur 1000 times)
+hist(obs_sum) #give me a histogram of the frequency of species in each observation/site? 
+#(there are x sites that have 40 species in them)
 par(mfrow=c(1,1))
 ```
+
+Representing NMDS visually, we construct a plot that groups species and indicates environmental moisture levels. This plot indicates that generally, species assemblages are split based on moisture needs. It seems that species could be predicted based on high (4-5) and low (1-2) moisture levels.  I would hypothesize that areas of dune with high moisture would host plant communities significantly different from those with low moisture.
 
 ```{r}
 # Non-metric multidimenstional scaling (MDS) with default  Bray-Curtis.
@@ -49,9 +53,10 @@ legend('topright', paste("Moisture =", c(1,2,4,5), sep=''), #fixed
 ```
 
 
-2. Continuing off the 
+2. Continuing off the NMDS we can use direct ordination (CCA) to compare species assemblage and dune environmental data. I am interested in testing the hypothesis that dune plant communities differ significantly based on the availability of moisure. First, we construct a CCA model comparing dune species, and environmental data. CCA indicates that environmental conditions explain 71% of the variation in plant species assemblages. Graphically, moisture loads along both axes, potentially indicating a split (high vs low) in species distribution. An ANOVA indicates that this model fits significantly better than random observations (ie, observations are not likely to be random), but does not indicate significant partial effects of the environmental variables.
 
 ```{r}
+#sorry for printing this!
 r2_adj_cca = function(cca_obj, nperm, analytical=FALSE) {
       r2 = cca_obj$CCA$tot.chi / cca_obj$tot.chi 
     n = nrow(cca_obj$CCA$Xbar)
@@ -102,10 +107,12 @@ text(dune_cca, display='bp', col='red')
 
 anova(dune_cca)
 anova(dune_cca, by='margin')
-#the model itself is significant, but individual variables do not appear to be.
+#the model itself is significant
+```
 
+Because I am most interested in the role of moisture as an explanatory variable, an addational CCA using only moisture was conducted. This model indicates that moisture alone explains 30% of the variation explained by the environmental variables, or 40% (.297/.7106) of the variation in plant species composition. Plotting this model again indicates a split in how moisture loads on the axes, and an ANOVA indicates a significant difference in plant species composition between moisture levels.  
 
-
+```{r}
 dune_cca_moist = cca(dune ~ dune.env$Moisture)
 dune_cca_moist #moisture alone explains 30% of variation or.
 
@@ -117,6 +124,6 @@ anova(dune_cca_moist)
 
 ```
 
-
+3. It seems that the indirect and direct ordination methods are telling the same story but in different ways. The take home message is the same, plant species composition can be explained by moisture, but indirect ordination shows this visually and is useful for exploration of trends in the data. Direct ordination is able to show this same trend numerically and with stastical tests, but is only useful after general exploration of the data has been conducted. Ultimately, direct ordination is more useful, but requires the explorative tools of indirect methods. 
 
 
