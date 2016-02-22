@@ -7,7 +7,7 @@ output: pdf_document
 
 Question 1:
 -
-I examined the dataset and selected a relitavely common species, T. tuberculata and a relitavely rare species, P. elegans. I examined the relationship between the abundance of each species and space based on the BCI dataset. 
+I examined the dataset and selected a relatively common species, T. tuberculata and a relatively rare species, P. elegans. I examined the relationship between the abundance of each species and space based on the BCI dataset. 
 
 ```{r, echo=FALSE}
 library(vegan)
@@ -28,7 +28,7 @@ BCI_few=BCI$Platypodium.elegans
 boxplot(BCI_sub)
 ```
 
-Common Species: T. tuberculata is abundant and widely distributed. This species does not exhibit any form of spatial dependence. Biologicaly, this makes sense, a species that occurs commonly and in high abundance in a given habitat is not likely to be dependent on any specific environmental variables within that habitat
+Common Species: T. tuberculata is abundant and widely distributed. This species does not exhibit any form of spatial dependence. Biologically, this makes sense, a species that occurs commonly and in high abundance in a given habitat is not likely to be dependent on any specific environmental variables within that habitat
 
 ```{r}
 #visual summary of abundance
@@ -57,7 +57,7 @@ lots_mantel = mantel(xy_dist, lots_dist)
 lots_mantel # observed spatial patterns not significantly different from random.
 ```
 
-Rare Species: P. elegans is patchy in distribution and more abundant in some patches than others. This species does appear to be dpatialy dependent, as it's distribution pattern is significantly different from random (p<0.01). P. elegans is a large tree whose spatial distribution is likely dependent on it's ability to out compete other trees for sunlight, potentially explaining its patchy, spatially dependent distribution.
+Rare Species: P. elegans is patchy in distribution and more abundant in some patches than others. This species does appear to be spatially dependent, as it's distribution pattern is significantly different from random (p<0.01). P. elegans is a large tree whose spatial distribution is likely dependent on it's ability to out compete other trees for sunlight, potentially explaining its patchy, spatially dependent distribution.
 
 
 ```{r}
@@ -99,7 +99,7 @@ modeling_dat = data.frame(response,BCI[,which(colnames(BCI) %in% sp_ids)],BCI_xy
 
 ```
 
-Model 1: Picking the species T. arborea, I constructed a general linear model to predict the abundance of our species of interest, D. standleyi. I also examined spatial dependence of the model residuals The model. Using only a single species and without accounting for spatial dpendence, does not do a very adequate job of explining abundance of the species of interest. Adding a spatial error term (in the form of Variograms) altered the model coefficents and generally improved the fit. Of the spatial error terms applied the rational quadratic model provided the best fit.
+Model 1: Picking the species T. arborea, I constructed a general linear model to predict the abundance of our species of interest, D. standleyi. I also examined spatial dependence of the model residuals The model. Using only a single species and without accounting for spatial dependence, does not do a very adequate job of explaining abundance of the species of interest. Adding a spatial error term (in the form of Variograms) altered the model coefficients and generally improved the fit. Of the spatial error terms applied the rational quadratic model provided the best fit.
 
 
 ```{r}
@@ -145,7 +145,7 @@ anova(mod1, mod1_exp, mod1_rat, mod1_spher, mod1_gaus)
 #rational quadratic model has lowest AIC, barely
 ```
 
-Model 2: To develope a model to better perdict the abundance of our species of interest, additional predictor species were inclueed in a second GLM. This model better predicts the abundance of our species of interest. Again, the addation of an spatial error term was able to provide some improvment of the fit. In this instance, expodential spatial error term provided the best fit. 
+Model 2: To develop a model to better predict the abundance of our species of interest, additional predictor species were included in a second GLM. This model better predicts the abundance of our species of interest. Again, the addition of an spatial error term was able to provide some improvement of the fit. In this instance, exponential spatial error term provided the best fit. 
 
 ```{r}
 mod2=gls(response~Cordia.lasiocalyx+Hirtella.triandra+Picramnia.latifolia+Quassia.amara+Tabernaemontana.arborea+Trattinnickia.aspera+Xylopia.macrantha, data=modeling_dat)
