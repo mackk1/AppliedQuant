@@ -1,0 +1,193 @@
+---
+title: "HW5"
+author: "Kevin Mack"
+date: "2/17/2016"
+output: pdf_document
+---
+
+Question 1:
+-
+I examined the dataset and selected a relitavely common species, T. tuberculata and a relitavely rare species, P. elegans. I examined the relationship between the abundance of each species and space based on the BCI dataset. 
+
+```{r, echo=FALSE}
+library(vegan)
+library(nlme)
+data(BCI)
+BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), 
+                    y = rep(seq(1011569,  1011969, by=100), len=50))
+```
+
+```{r}
+boxplot(BCI)
+plot(BCI$Trichilia.tuberculata)# abundant
+plot(BCI$Platypodium.elegans) # rare, but enough for me to work with
+BCI_sub=subset(BCI, select= c(Trichilia.tuberculata, Platypodium.elegans))
+BCI_lots=BCI$Trichilia.tuberculata
+BCI_few=BCI$Platypodium.elegans
+
+boxplot(BCI_sub)
+```
+
+Common Species: T. tuberculata is abundant and widely distributed. This species does not exhibit any form of spatial dependence. Biologicaly, this makes sense, a species that occurs commonly and in high abundance in a given habitat is not likely to be dependent on any specific environmental variables within that habitat
+
+```{r}
+#visual summary of abundance
+col_brks = hist(BCI_lots, plot=F)$breaks
+col_indices = as.numeric(cut(BCI_lots, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI_xy, cex=2, pch=19, col=cols[col_indices], main="Spatial Distribution of T. tuberculata ")
+
+#Determine distances
+lots_dist = dist(BCI_lots)
+xy_dist = dist(BCI_xy)
+max_dist = max(xy_dist) / 2
+
+# plot result
+plot(xy_dist, lots_dist)
+abline(lm(lots_dist ~ xy_dist), lwd=3, col='red') #positive line is pretty level
+lines(lowess(xy_dist, lots_dist), lwd=3, col='pink')
+abline(v = max_dist, col='red', lwd=3, lty=2) #line is fairly level, certianly levels off with distance. Abundance of this species does not continue to increase with distance
+
+#Compute Correlation
+lots_cor = cor(xy_dist, lots_dist)
+lots_cor # weakly correlated
+
+#mantel test
+lots_mantel = mantel(xy_dist, lots_dist)
+lots_mantel # observed spatial patterns not significantly different from random.
+```
+
+Rare Species: P. elegans is patchy in distribution and more abundant in some patches than others. This species does appear to be dpatialy dependent, as it's distribution pattern is significantly different from random (p<0.01). P. elegans is a large tree whose spatial distribution is likely dependent on it's ability to out compete other trees for sunlight, potentially explaining its patchy, spatially dependent distribution.
+
+
+```{r}
+#visual summary of abundance
+col_brks = hist(BCI_few, plot=F)$breaks
+col_indices = as.numeric(cut(BCI_few, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI_xy, cex=2, pch=19, col=cols[col_indices], main="Spatial Distribution of P. elegans")
+
+#Determine distances
+few_dist = dist(BCI_few)
+
+# plot result
+plot(xy_dist, few_dist)
+abline(lm(few_dist ~ xy_dist), lwd=3, col='red') #positive line is pretty level
+lines(lowess(xy_dist, few_dist), lwd=3, col='pink')
+abline(v = max_dist, col='red', lwd=3, lty=2) #line has distinct positive slope which does not appear to level off, abundance of this species increases with distance (?)
+
+#Compute Correlation
+few_cor = cor(xy_dist, few_dist)
+few_cor # correlated
+
+#mantel test
+few_mantel = mantel(xy_dist, few_dist)
+few_mantel # observed spatial patterns are significantly different from random.
+```
+
+Question2 :
+-
+I developed two GLMs to predict the abundance of a species of interest, D. standleyi  as a function of the abundance of other species.
+```{r}
+#Structuring data for the models
+#thanks to Tom for this workaround
+
+sp_ids = c("Cordia.lasiocalyx", "Hirtella.triandra","Picramnia.latifolia", "Quassia.amara",        "Tabernaemontana.arborea", "Trattinnickia.aspera","Xylopia.macrantha")
+response = BCI$Drypetes.standleyi
+
+modeling_dat = data.frame(response,BCI[,which(colnames(BCI) %in% sp_ids)],BCI_xy)
+
+```
+
+Model 1: Picking the species T. arborea, I constructed a general linear model to predict the abundance of our species of interest, D. standleyi. I also examined spatial dependence of the model residuals The model. Using only a single species and without accounting for spatial dpendence, does not do a very adequate job of explining abundance of the species of interest. Adding a spatial error term (in the form of Variograms) altered the model coefficents and generally improved the fit. Of the spatial error terms applied the rational quadratic model provided the best fit.
+
+
+```{r}
+sp_e = modeling_dat$Tabernaemontana.arborea #cause I dont want to type out Tabernaemontana.arborea a bajillion times, even though I just typed it out an extra time to say that. Actually, now its fun: Taverninmontana.arborday
+
+mod1 = gls(response~sp_e, data=modeling_dat)
+summary(mod1)
+
+plot(Variogram(mod1, form= ~ x + y, nugget=T)) #dat nugget
+
+#residuals
+res = residuals(mod1)
+plot(dist(modeling_dat[, c('x', 'y')]), dist(res))
+lines(lowess(dist(modeling_dat[, c('x', 'y')]), dist(res)), col='red', lwd=2)
+abline(v = max_dist, col='red', lwd=3, lty=2)
+
+#fit of error model: expodential
+mod1_exp = update(mod1, corr=corExp(form=~x + y))
+summary(mod1_exp)
+plot(Variogram(mod1_exp, maxDist = max_dist)) #yeah, this is bad
+plot(Variogram(mod1_exp, resType = 'normalized', maxDist = max_dist))
+
+#fit of error model: rational quadratic
+mod1_rat = update(mod1_exp, corr=corRatio(form=~x+y, nugget=T))
+summary(mod1_rat)
+plot(Variogram(mod1_rat, maxDist = max_dist))
+plot(Variogram(mod1_rat, resType = 'n',  maxDist = max_dist)) #much better
+
+#fit of error model: Spherical
+mod1_spher = update(mod1_rat, corr=corSpher(form=~x+y, nugget = T))
+summary(mod1_spher)
+plot(Variogram(mod1_spher, maxDist = max_dist))
+plot(Variogram(mod1_spher, resType = 'n',  maxDist = max_dist)) #rational quadratic better
+
+#fit of error model: Gaussian
+mod1_gaus = update(mod1_spher, corr=corGaus(form=~x+y, nugget=T))
+summary(mod1_gaus)
+plot(Variogram(mod1_gaus, maxDist = max_dist))
+plot(Variogram(mod1_gaus, resType = 'n',  maxDist = max_dist)) #also pretty good
+
+
+anova(mod1, mod1_exp, mod1_rat, mod1_spher, mod1_gaus)
+#rational quadratic model has lowest AIC, barely
+```
+
+Model 2: To develope a model to better perdict the abundance of our species of interest, additional predictor species were inclueed in a second GLM. This model better predicts the abundance of our species of interest. Again, the addation of an spatial error term was able to provide some improvment of the fit. In this instance, expodential spatial error term provided the best fit. 
+
+```{r}
+mod2=gls(response~Cordia.lasiocalyx+Hirtella.triandra+Picramnia.latifolia+Quassia.amara+Tabernaemontana.arborea+Trattinnickia.aspera+Xylopia.macrantha, data=modeling_dat)
+summary(mod2)
+
+
+plot(Variogram(mod2, form=~x+y))
+
+#residuals
+res2 = residuals(mod2)
+plot(dist(modeling_dat[, c('x', 'y')]), dist(res2))
+lines(lowess(dist(modeling_dat[, c('x', 'y')]), dist(res2)), col='red', lwd=2)
+abline(v = max_dist, col='red', lwd=3, lty=2)
+
+#fit of error model: expodential
+mod2_exp = update(mod2, corr=corExp(form=~x + y))
+summary(mod2_exp)
+plot(Variogram(mod2_exp, maxDist = max_dist,  data=modeling_dat)) #yeah, this is bad
+plot(Variogram(mod2_exp, resType = 'normalized', maxDist = max_dist,  data=modeling_dat))
+
+#fit of error model: rational quadratic
+mod2_rat = update(mod2_exp, corr=corRatio(form=~x+y, nugget=T))
+summary(mod2_rat)
+plot(Variogram(mod2_rat, maxDist = max_dist,  data=modeling_dat))
+plot(Variogram(mod2_rat, resType = 'n',  maxDist = max_dist,  data=modeling_dat)) 
+
+#fit of error model: Spherical
+mod2_spher = update(mod2_rat, corr=corSpher(form=~x+y, nugget = T))
+summary(mod2_spher)
+plot(Variogram(mod2_spher, maxDist = max_dist,  data=modeling_datt))
+plot(Variogram(mod2_spher, resType = 'n',  maxDist = max_dist,  data=modeling_dat)) 
+
+#fit of error model: Gaussian
+mod2_gaus = update(mod2_spher, corr=corGaus(form=~x+y, nugget=T))
+summary(mod2_gaus)
+plot(Variogram(mod2_gaus, maxDist = max_dist))
+plot(Variogram(mod2_gaus, resType = 'n',  maxDist = max_dist)) 
+
+
+anova(mod2, mod2_exp, mod2_rat, mod2_spher, mod2_gaus)
+#exponential model has lowest AIC, barely. 
+
+
+```
+
